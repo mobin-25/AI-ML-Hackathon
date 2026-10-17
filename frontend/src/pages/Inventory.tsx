@@ -4,7 +4,6 @@ import {
   Plus,
   Barcode,
   Scan,
-  FileText,
   Package,
   Filter,
   AlertTriangle,
@@ -18,10 +17,11 @@ import {
   Trash2,
   X,
   CheckCircle2,
-  Upload,
 } from 'lucide-react';
 import { getProducts, createProduct, updateProduct, deleteProduct } from '../api/client';
 import type { Product } from '../types';
+import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
+import { AiProductScannerModal } from '../components/AiProductScannerModal';
 
 export const Inventory: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -41,7 +41,7 @@ export const Inventory: React.FC = () => {
   // Action Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [activeScanModal, setActiveScanModal] = useState<'barcode' | 'product_scan' | 'invoice_scan' | null>(null);
+  const [activeScanModal, setActiveScanModal] = useState<'barcode' | 'product_scan' | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -264,6 +264,7 @@ export const Inventory: React.FC = () => {
 
         <button
           type="button"
+          id="btn-barcode-scan"
           onClick={() => setActiveScanModal('barcode')}
           className="px-4 py-2.5 bg-white hover:bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs sm:text-sm font-semibold text-[#191919] flex items-center gap-2 shadow-2xs transition-colors cursor-pointer"
         >
@@ -273,20 +274,12 @@ export const Inventory: React.FC = () => {
 
         <button
           type="button"
+          id="btn-product-scan"
           onClick={() => setActiveScanModal('product_scan')}
           className="px-4 py-2.5 bg-white hover:bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs sm:text-sm font-semibold text-[#191919] flex items-center gap-2 shadow-2xs transition-colors cursor-pointer"
         >
           <Scan className="w-4 h-4 text-[#64748B]" />
           <span>Product Scan</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveScanModal('invoice_scan')}
-          className="px-4 py-2.5 bg-white hover:bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs sm:text-sm font-semibold text-[#191919] flex items-center gap-2 shadow-2xs transition-colors cursor-pointer"
-        >
-          <FileText className="w-4 h-4 text-[#64748B]" />
-          <span>Scan Invoice</span>
         </button>
       </div>
 
@@ -729,107 +722,29 @@ export const Inventory: React.FC = () => {
       )}
 
       {/* Barcode Scanner Modal */}
-      {activeScanModal === 'barcode' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-gray-100 text-center">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[#191919]">Barcode Scanner</h3>
-              <button
-                type="button"
-                onClick={() => setActiveScanModal(null)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="h-44 bg-gray-900 rounded-xl flex flex-col items-center justify-center text-white p-4 relative overflow-hidden mb-4">
-              <div className="w-48 h-24 border-2 border-[#6125E8] rounded-lg relative flex items-center justify-center">
-                <div className="w-full h-0.5 bg-[#6125E8] animate-pulse" />
-              </div>
-              <span className="text-[11px] text-gray-400 mt-3">Position barcode inside camera viewfinder</span>
-            </div>
-            <p className="text-xs text-[#667085] mb-4">
-              Camera scanner ready. Compatible with EAN-13, UPC, Code 128, and QR codes.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                alert('Barcode EAN-890123456789 scanned successfully!');
-                setActiveScanModal(null);
-              }}
-              className="w-full py-2.5 bg-[#6125E8] hover:bg-[#521cc9] text-white text-xs font-semibold rounded-xl cursor-pointer"
-            >
-              Simulate Barcode Capture
-            </button>
-          </div>
-        </div>
-      )}
+      <BarcodeScannerModal
+        isOpen={activeScanModal === 'barcode'}
+        onClose={() => setActiveScanModal(null)}
+        products={products}
+        onProductSelect={(product) => {
+          setSearchQuery(product.product_id);
+          setActiveScanModal(null);
+        }}
+      />
 
-      {/* Product Scan Modal */}
-      {activeScanModal === 'product_scan' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-gray-100 text-center">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[#191919]">AI Product Recognition</h3>
-              <button
-                type="button"
-                onClick={() => setActiveScanModal(null)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 mb-4 hover:border-[#6125E8] transition-colors cursor-pointer">
-              <Scan className="w-10 h-10 text-[#6125E8] mx-auto mb-2" />
-              <p className="text-xs font-semibold text-gray-800">Snap or drag product photo</p>
-              <p className="text-[11px] text-gray-500 mt-1">AI identifies product shape, brand logo & text</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                alert('AI Vision Scanner: Identified 65W Fast Charger (Confidence: 97%)');
-                setActiveScanModal(null);
-              }}
-              className="w-full py-2.5 bg-[#6125E8] hover:bg-[#521cc9] text-white text-xs font-semibold rounded-xl cursor-pointer"
-            >
-              Run AI Recognition
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Scan Invoice Modal */}
-      {activeScanModal === 'invoice_scan' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-gray-100 text-center">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[#191919]">Invoice OCR Ingestion</h3>
-              <button
-                type="button"
-                onClick={() => setActiveScanModal(null)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 mb-4 hover:border-[#6125E8] transition-colors cursor-pointer">
-              <Upload className="w-10 h-10 text-[#6125E8] mx-auto mb-2" />
-              <p className="text-xs font-semibold text-gray-800">Upload purchase bill / invoice (PDF or Image)</p>
-              <p className="text-[11px] text-gray-500 mt-1">Extracts supplier name, line items & taxes</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                alert('Invoice OCR parsed: 3 line items detected and ready for stock update.');
-                setActiveScanModal(null);
-              }}
-              className="w-full py-2.5 bg-[#6125E8] hover:bg-[#521cc9] text-white text-xs font-semibold rounded-xl cursor-pointer"
-            >
-              Parse Invoice Bill
-            </button>
-          </div>
-        </div>
-      )}
+      {/* AI Product Scanner Modal */}
+      <AiProductScannerModal
+        isOpen={activeScanModal === 'product_scan'}
+        onClose={() => setActiveScanModal(null)}
+        categories={categories.filter((c: string) => c !== 'All Categories')}
+        onProductAdded={(newProduct) => {
+          setProducts((prev) => [newProduct, ...prev]);
+          setNotification({
+            message: `Product ${newProduct.product_name} added to catalog successfully!`,
+            type: 'success',
+          });
+        }}
+      />
     </div>
   );
 };

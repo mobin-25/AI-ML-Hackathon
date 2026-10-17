@@ -6,8 +6,11 @@ import {
   getDemoForecast,
   enrichProductsWithMetrics,
   getDemoReorderRecommendations,
+  calculatePosDemandMetrics,
   DEMO_EVALUATION_METRICS,
 } from './demoAdapter';
+
+export { calculatePosDemandMetrics };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -133,11 +136,11 @@ export async function deleteProduct(productId: string): Promise<ApiResponse<bool
 }
 
 /**
- * Fetch 30-day historical sales records
+ * Fetch historical sales records (default 90 days)
  */
-export async function getSalesHistory(): Promise<ApiResponse<SalesRecord[]>> {
+export async function getSalesHistory(days: number = 90): Promise<ApiResponse<SalesRecord[]>> {
   try {
-    const res = await api.get('/api/sales');
+    const res = await api.get(`/api/sales?days=${days}`);
     if (Array.isArray(res.data)) {
       return { data: res.data, isDemo: false };
     }
@@ -145,18 +148,18 @@ export async function getSalesHistory(): Promise<ApiResponse<SalesRecord[]>> {
     // Demo fallback
   }
   return {
-    data: getDemoSalesHistory(),
+    data: getDemoSalesHistory(days),
     isDemo: true,
-    message: 'Using calibrated 30-day demo retail sales history',
+    message: `Using calibrated ${days}-day retail sales history`,
   };
 }
 
 /**
- * Fetch 7-day AI demand forecast
+ * Fetch AI demand forecast for specified horizon (7, 30, or 90 days)
  */
-export async function get7DayForecast(): Promise<ApiResponse<ForecastDemand[]>> {
+export async function getDemandForecast(horizonDays: number = 7): Promise<ApiResponse<ForecastDemand[]>> {
   try {
-    const res = await api.get('/api/forecast');
+    const res = await api.get(`/api/forecast?horizon=${horizonDays}`);
     if (Array.isArray(res.data)) {
       return { data: res.data, isDemo: false };
     }
@@ -164,10 +167,17 @@ export async function get7DayForecast(): Promise<ApiResponse<ForecastDemand[]>> 
     // Demo fallback
   }
   return {
-    data: getDemoForecast(),
+    data: getDemoForecast(horizonDays, sessionProducts),
     isDemo: true,
-    message: 'Using calibrated 7-day baseline demand forecast',
+    message: `Using ${horizonDays}-day baseline ML demand forecast`,
   };
+}
+
+/**
+ * Fetch 7-day AI demand forecast (backward compatibility)
+ */
+export async function get7DayForecast(): Promise<ApiResponse<ForecastDemand[]>> {
+  return getDemandForecast(7);
 }
 
 /**

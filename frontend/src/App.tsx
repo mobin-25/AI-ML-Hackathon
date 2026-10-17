@@ -23,6 +23,8 @@ import { Inventory } from './pages/Inventory';
 import { Forecasting } from './pages/Forecasting';
 import { Alerts } from './pages/Alerts';
 import { Import } from './pages/Import';
+import { POS } from './pages/POS';
+import { Reports } from './pages/Reports';
 
 export const App: React.FC = () => {
   return (
@@ -52,8 +54,8 @@ export const App: React.FC = () => {
           <Route path="/forecasting" element={<Forecasting />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/import" element={<Import />} />
-          <Route path="/pos" element={<Dashboard />} />
-          <Route path="/reports" element={<Forecasting />} />
+          <Route path="/pos" element={<POS />} />
+          <Route path="/reports" element={<Reports />} />
         </Route>
 
         {/* Catch-all 404 Route */}

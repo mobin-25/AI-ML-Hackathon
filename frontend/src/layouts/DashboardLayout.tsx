@@ -24,7 +24,7 @@ export const DashboardLayout: React.FC = () => {
   const sidebarItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Products / Inventory', path: '/inventory', icon: Package },
-    { name: 'Sales / Billing (POS)', path: '/pos', icon: CreditCard },
+    { name: 'Sales', path: '/pos', icon: CreditCard },
     { name: 'Low Stock Alerts', path: '/alerts', icon: CircleAlert },
     { name: 'AI Forecasts', path: '/forecasting', icon: TrendingUp },
     { name: 'Reports', path: '/reports', icon: ChartColumn },

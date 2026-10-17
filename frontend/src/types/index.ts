@@ -72,3 +72,20 @@ export interface ContactFormData {
   subject: string;
   message: string;
 }
+
+export interface PosProductDemandSummary {
+  product_id: string;
+  product_name: string;
+  category: string;
+  current_stock: number;
+  units_sold_historical: number;
+  forecast_demand: number;
+  safety_stock: number;
+  confirmed_incoming: number;
+  estimated_shortage: number;
+  recommended_replenish: number;
+  demand_trend: 'Increasing' | 'Stable' | 'Decreasing';
+  recommended_action: 'Urgent Restock' | 'Restock Soon' | 'Sufficient Stock' | 'Hold Orders';
+  lead_time_days: number;
+}
+
