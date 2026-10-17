@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --brand-orange: #FF642D;
+    --brand-orange-hover: #E8531C;
+    --brand-bg: #F5F7FA;
+    --text-primary: #191919;
+    --text-muted: #667085;
+    --border-subtle: #E5E7EB;
+  }
+
+  body {
+    background-color: #F5F7FA;
+    color: #191919;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+}
+
+/* Pink to coral/orange gradient matching reference screenshots */
+.gradient-heading {
+  background: linear-gradient(135deg, #FF2B6D 0%, #FF642D 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
