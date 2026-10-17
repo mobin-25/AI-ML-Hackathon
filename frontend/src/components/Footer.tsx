@@ -42,7 +42,15 @@ export const Footer: React.FC = () => {
             <div className="flex items-center">
               {/* White-mode Logo */}
               <div className="flex items-center gap-2.5">
-                <svg className="w-8 h-8 shrink-0" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg
+                  width="32"
+                  height="32"
+                  className="w-8 h-8 shrink-0"
+                  style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
+                  viewBox="0 0 48 48"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
                   <path d="M24 7L38 15V27L24 19V7Z" fill="#A78BFA" opacity="0.9" />
                   <path d="M10 15L24 7V19L10 27V15Z" fill="#8B5CF6" opacity="0.95" />
                   <path d="M10 19L24 27V41L10 33V19Z" fill="#60A5FA" />

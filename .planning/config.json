@@ -1,0 +1,9 @@
+{
+  "project": "SmartStock AI",
+  "version": "1.0.0",
+  "mode": "hackathon",
+  "workflow": {
+    "auto_verify": true,
+    "parallel_execution": false
+  }
+}

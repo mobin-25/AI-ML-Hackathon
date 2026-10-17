@@ -8,7 +8,15 @@ export const Logo: React.FC<LogoProps> = ({ className = '' }) => {
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
       {/* 3D Colorful Isometric Cube Icon with upward trend */}
-      <svg className="w-9 h-9 shrink-0" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg
+        width="36"
+        height="36"
+        className="w-9 h-9 shrink-0"
+        style={{ width: '36px', height: '36px', minWidth: '36px', minHeight: '36px' }}
+        viewBox="0 0 48 48"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
         <defs>
           <linearGradient id="cubeTop" x1="14" y1="8" x2="34" y2="22" gradientUnits="userSpaceOnUse">
             <stop stopColor="#8B5CF6" />

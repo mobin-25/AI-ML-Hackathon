@@ -1,4 +1,4 @@
-import type { Product, SalesRecord, ForecastDemand, ModelEvaluation, ReorderRecommendation } from '../types';
+import type { Product, SalesRecord, ForecastDemand, ModelEvaluation, ReorderRecommendation, PosProductDemandSummary } from '../types';
 
 export const INITIAL_DEMO_PRODUCTS: Product[] = [
   {
@@ -93,21 +93,21 @@ export const INITIAL_DEMO_PRODUCTS: Product[] = [
   },
 ];
 
-// Generate synthetic historical sales (last 30 days)
-export function getDemoSalesHistory(): SalesRecord[] {
+// Generate historical sales (up to 90 days), merged with completed POS sales
+export function getDemoSalesHistory(days: number = 90): SalesRecord[] {
   const records: SalesRecord[] = [];
   const today = new Date();
 
   INITIAL_DEMO_PRODUCTS.forEach((prod) => {
     const base = prod.base_daily_sales || 5;
-    for (let i = 30; i >= 1; i--) {
+    for (let i = days; i >= 1; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-      const variation = (Math.sin(i * 1.5) * 1.8);
+      const variation = Math.sin(i * 0.8) * (base * 0.25);
       const weekendBoost = isWeekend ? 1.25 : 1.0;
       const qty = Math.max(1, Math.round((base + variation) * weekendBoost));
-      
+
       records.push({
         product_id: prod.product_id,
         date: d.toISOString().split('T')[0],
@@ -116,22 +116,71 @@ export function getDemoSalesHistory(): SalesRecord[] {
     }
   });
 
+  // Merge today's completed POS sales if any exist
+  try {
+    const posSalesJson = localStorage.getItem('smartstock_pos_sales_events');
+    if (posSalesJson) {
+      const posEvents = JSON.parse(posSalesJson);
+      if (Array.isArray(posEvents)) {
+        posEvents.forEach((ev: any) => {
+          if (ev.product_id && ev.quantity && ev.date) {
+            const existing = records.find(
+              (r) => r.product_id === ev.product_id && r.date === ev.date
+            );
+            if (existing) {
+              existing.quantity_sold += Number(ev.quantity);
+            } else {
+              records.push({
+                product_id: ev.product_id,
+                date: ev.date,
+                quantity_sold: Number(ev.quantity),
+              });
+            }
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('Could not read pos sales events:', err);
+  }
+
   return records;
 }
 
-// Generate 7-Day Demand Forecast
-export function getDemoForecast(): ForecastDemand[] {
+// Generate Demand Forecast for specified horizon (7, 30, or 90 days)
+// Implements moving-average baseline with weekend seasonality matching src/forecast.py
+export function getDemoForecast(horizonDays: number = 7, products: Product[] = INITIAL_DEMO_PRODUCTS): ForecastDemand[] {
   const forecast: ForecastDemand[] = [];
   const today = new Date();
+  const salesHistory = getDemoSalesHistory(60);
 
-  INITIAL_DEMO_PRODUCTS.forEach((prod) => {
-    const base = prod.base_daily_sales || 5;
-    for (let day = 1; day <= 7; day++) {
+  products.forEach((prod) => {
+    // Calculate moving average from recent 7 days of sales for this product
+    const prodSales = salesHistory.filter((s) => s.product_id === prod.product_id);
+    const recent7 = prodSales.slice(-7);
+    const recentAvg =
+      recent7.length > 0
+        ? recent7.reduce((sum, s) => sum + s.quantity_sold, 0) / recent7.length
+        : prod.base_daily_sales || 5;
+
+    // Compute trend momentum (recent 7 vs previous 7)
+    const prev7 = prodSales.slice(-14, -7);
+    const prevAvg =
+      prev7.length > 0
+        ? prev7.reduce((sum, s) => sum + s.quantity_sold, 0) / prev7.length
+        : recentAvg;
+    const trendGrowth = prevAvg > 0 ? (recentAvg - prevAvg) / prevAvg : 0;
+    const boundedGrowth = Math.max(-0.2, Math.min(0.2, trendGrowth));
+
+    for (let day = 1; day <= horizonDays; day++) {
       const d = new Date(today);
       d.setDate(d.getDate() + day);
       const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-      const dowMultiplier = isWeekend ? 1.2 : 1.0;
-      const predicted = Math.max(1, Math.round(base * dowMultiplier));
+      const dowMultiplier = isWeekend ? 1.25 : 1.0;
+
+      // Realistic trend progression
+      const timeTrend = 1.0 + (boundedGrowth * (day / horizonDays) * 0.5);
+      const predicted = Math.max(1, Math.round(recentAvg * dowMultiplier * timeTrend));
 
       forecast.push({
         product_id: prod.product_id,
@@ -253,3 +302,77 @@ export const DEMO_EVALUATION_METRICS: ModelEvaluation[] = [
     model_type: "Ridge + DOW Harmonic Regression",
   },
 ];
+
+/**
+ * Calculates demand ranking and restocking metrics specifically for the POS & Forecasting views.
+ * Restocking Formula:
+ * Estimated shortage = max(0, forecast demand + safety stock - available stock - confirmed incoming stock)
+ */
+export function calculatePosDemandMetrics(
+  horizonDays: number,
+  products: Product[],
+  salesHistory: SalesRecord[],
+  forecasts: ForecastDemand[]
+): PosProductDemandSummary[] {
+  return products.map((prod) => {
+    // 1. Units sold in the historical period matching horizon (e.g. past 7, 30, or 90 days)
+    const prodSales = salesHistory.filter((s) => s.product_id === prod.product_id);
+    const historicalSlice = prodSales.slice(-horizonDays);
+    const units_sold_historical = historicalSlice.reduce((sum, s) => sum + s.quantity_sold, 0);
+
+    // 2. Forecast demand over the selected future period
+    const prodForecast = forecasts.filter((f) => f.product_id === prod.product_id);
+    const forecast_demand = prodForecast.reduce((sum, f) => sum + f.predicted_demand, 0);
+
+    // 3. Historical trend comparison (recent half vs prior half of the window)
+    const half = Math.max(3, Math.floor(historicalSlice.length / 2));
+    const recentHalf = historicalSlice.slice(-half);
+    const priorHalf = historicalSlice.slice(-half * 2, -half);
+    const recentSum = recentHalf.reduce((sum, s) => sum + s.quantity_sold, 0);
+    const priorSum = priorHalf.reduce((sum, s) => sum + s.quantity_sold, 0);
+
+    let demand_trend: 'Increasing' | 'Stable' | 'Decreasing' = 'Stable';
+    if (priorSum > 0) {
+      const growth = (recentSum - priorSum) / priorSum;
+      if (growth > 0.08) demand_trend = 'Increasing';
+      else if (growth < -0.08) demand_trend = 'Decreasing';
+    }
+
+    // 4. Daily burn rate and safety stock
+    const dailyRate = forecast_demand / Math.max(1, horizonDays);
+    const safety_stock = Math.round(dailyRate * Math.max(2, (prod.lead_time_days || 3) * 0.5));
+    const confirmed_incoming = 0; // Baseline assumption: no active purchase orders logged
+
+    // 5. Shortage calculation according to specification:
+    // Estimated shortage = max(0, forecast demand + safety stock - available stock - confirmed incoming stock)
+    const estimated_shortage = Math.max(0, forecast_demand + safety_stock - prod.current_stock - confirmed_incoming);
+    const recommended_replenish = estimated_shortage;
+
+    // 6. Recommended Action
+    let recommended_action: 'Urgent Restock' | 'Restock Soon' | 'Sufficient Stock' | 'Hold Orders' = 'Sufficient Stock';
+    if (prod.current_stock === 0 || prod.current_stock <= Math.round(dailyRate * (prod.lead_time_days || 2))) {
+      recommended_action = 'Urgent Restock';
+    } else if (estimated_shortage > 0) {
+      recommended_action = 'Restock Soon';
+    } else if (prod.current_stock > (forecast_demand + safety_stock) * 1.5) {
+      recommended_action = 'Hold Orders';
+    }
+
+    return {
+      product_id: prod.product_id,
+      product_name: prod.product_name,
+      category: prod.category || 'General',
+      current_stock: prod.current_stock,
+      units_sold_historical,
+      forecast_demand,
+      safety_stock,
+      confirmed_incoming,
+      estimated_shortage,
+      recommended_replenish,
+      demand_trend,
+      recommended_action,
+      lead_time_days: prod.lead_time_days || 3,
+    };
+  });
+}
+

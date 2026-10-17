@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Search,
   Barcode,
   Scan,
-  FileText,
   Plus,
   Zap,
   CheckCircle2,
@@ -20,7 +18,6 @@ import {
   Mic,
   Send,
   X,
-  Upload,
 } from 'lucide-react';
 import {
   LineChart,
@@ -36,6 +33,8 @@ import {
 } from 'recharts';
 import { getProducts, getSalesHistory, createProduct } from '../api/client';
 import type { Product, SalesRecord } from '../types';
+import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
+import { AiProductScannerModal } from '../components/AiProductScannerModal';
 
 export const Dashboard: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -46,7 +45,7 @@ export const Dashboard: React.FC = () => {
 
   // Active Action Modals for Command Center
   const [activeModal, setActiveModal] = useState<
-    'lookup' | 'barcode' | 'product_scan' | 'invoice_scan' | 'add_stock' | null
+    'barcode' | 'product_scan' | 'add_stock' | null
   >(null);
 
   // New stock form state
@@ -231,15 +230,7 @@ export const Dashboard: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2.5">
               <button
                 type="button"
-                onClick={() => setActiveModal('lookup')}
-                className="px-3.5 py-2 bg-white hover:bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs font-semibold text-[#191919] flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-              >
-                <Search className="w-3.5 h-3.5 text-[#64748B]" />
-                <span>Lookup Product</span>
-              </button>
-
-              <button
-                type="button"
+                id="btn-dashboard-barcode-scan"
                 onClick={() => setActiveModal('barcode')}
                 className="px-3.5 py-2 bg-white hover:bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs font-semibold text-[#191919] flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
               >
@@ -249,20 +240,12 @@ export const Dashboard: React.FC = () => {
 
               <button
                 type="button"
+                id="btn-dashboard-product-scan"
                 onClick={() => setActiveModal('product_scan')}
                 className="px-3.5 py-2 bg-white hover:bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs font-semibold text-[#191919] flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
               >
                 <Scan className="w-3.5 h-3.5 text-[#64748B]" />
                 <span>Product Scan</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveModal('invoice_scan')}
-                className="px-3.5 py-2 bg-white hover:bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs font-semibold text-[#191919] flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-              >
-                <FileText className="w-3.5 h-3.5 text-[#64748B]" />
-                <span>Scan Invoice</span>
               </button>
 
               <button
@@ -787,134 +770,21 @@ export const Dashboard: React.FC = () => {
       {/* ACTION MODALS (Command Center Interactive Features)                 */}
       {/* =================================================================== */}
 
-      {/* 1. Lookup Product Modal */}
-      {activeModal === 'lookup' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs">
-          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-xl border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[#191919] flex items-center gap-2">
-                <Search className="w-5 h-5 text-[#FF642D]" />
-                <span>Lookup Product</span>
-              </h3>
-              <button type="button" onClick={() => setActiveModal(null)} className="text-gray-400 hover:text-gray-600 p-1">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-xs text-[#667085] mb-4">
-              Search by SKU code, item name, or barcode number.
-            </p>
-            <input
-              type="text"
-              placeholder="e.g., SKU-1001 or Fast Charger..."
-              className="w-full px-4 py-2.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-sm mb-4 focus:bg-white focus:outline-none"
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveModal(null)}
-                className="px-4 py-2 border border-gray-200 text-xs font-semibold rounded-xl text-gray-700 hover:bg-gray-50"
-              >
-                Close
-              </button>
-              <Link
-                to="/inventory"
-                onClick={() => setActiveModal(null)}
-                className="px-4 py-2 bg-[#FF642D] text-white text-xs font-semibold rounded-xl hover:bg-[#E8531C]"
-              >
-                Search in Inventory →
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Barcode Scanner Modal */}
+      <BarcodeScannerModal
+        isOpen={activeModal === 'barcode'}
+        onClose={() => setActiveModal(null)}
+        products={products}
+      />
 
-      {/* 2. Barcode Scan Modal */}
-      {activeModal === 'barcode' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-gray-100 text-center">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[#191919]">Barcode Scanner</h3>
-              <button type="button" onClick={() => setActiveModal(null)} className="text-gray-400 hover:text-gray-600 p-1">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="h-44 bg-gray-900 rounded-xl flex flex-col items-center justify-center text-white p-4 relative overflow-hidden mb-4">
-              <div className="w-48 h-24 border-2 border-[#FF642D] rounded-lg relative flex items-center justify-center">
-                <div className="w-full h-0.5 bg-[#FF642D] animate-pulse" />
-              </div>
-              <span className="text-[11px] text-gray-400 mt-3">Position barcode inside camera viewfinder</span>
-            </div>
-            <p className="text-xs text-[#667085] mb-4">
-              Connected to camera scanning pipeline. Ready to ingest EAN-13, UPC, and QR codes.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                alert('Barcode EAN-890123456789 detected: Matched to catalogue item.');
-                setActiveModal(null);
-              }}
-              className="w-full py-2.5 bg-[#FF642D] hover:bg-[#E8531C] text-white text-xs font-semibold rounded-xl"
-            >
-              Simulate Scan Capture
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Product Scan Modal */}
-      {activeModal === 'product_scan' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-gray-100 text-center">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[#191919]">AI Product Recognition</h3>
-              <button type="button" onClick={() => setActiveModal(null)} className="text-gray-400 hover:text-gray-600 p-1">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 mb-4 hover:border-[#6428F5] transition-colors cursor-pointer">
-              <Scan className="w-10 h-10 text-[#6428F5] mx-auto mb-2" />
-              <p className="text-xs font-semibold text-gray-800">Snap or drag product photo</p>
-              <p className="text-[11px] text-gray-500 mt-1">AI identifies product shape, brand logo & text</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                alert('AI Vision Scanner: Identified 65W Fast Charger (Confidence: 97%)');
-                setActiveModal(null);
-              }}
-              className="w-full py-2.5 bg-[#6428F5] hover:bg-[#521fe0] text-white text-xs font-semibold rounded-xl"
-            >
-              Run AI Recognition
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 4. Scan Invoice Modal */}
-      {activeModal === 'invoice_scan' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-gray-100 text-center">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[#191919]">Invoice OCR Ingestion</h3>
-              <button type="button" onClick={() => setActiveModal(null)} className="text-gray-400 hover:text-gray-600 p-1">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 mb-4 hover:border-[#FF642D] transition-colors cursor-pointer">
-              <Upload className="w-10 h-10 text-[#FF642D] mx-auto mb-2" />
-              <p className="text-xs font-semibold text-gray-800">Upload purchase bill / invoice (PDF or Image)</p>
-              <p className="text-[11px] text-gray-500 mt-1">Extracts supplier name, line items & taxes</p>
-            </div>
-            <Link
-              to="/import"
-              onClick={() => setActiveModal(null)}
-              className="w-full py-2.5 bg-[#FF642D] hover:bg-[#E8531C] text-white text-xs font-semibold rounded-xl block text-center"
-            >
-              Open File Uploader →
-            </Link>
-          </div>
-        </div>
-      )}
+      {/* AI Product Scanner Modal */}
+      <AiProductScannerModal
+        isOpen={activeModal === 'product_scan'}
+        onClose={() => setActiveModal(null)}
+        onProductAdded={(newProduct) => {
+          setProducts((prev) => [newProduct, ...prev]);
+        }}
+      />
 
       {/* 5. Add New Stock Modal */}
       {activeModal === 'add_stock' && (
